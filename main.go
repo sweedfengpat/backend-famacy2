@@ -145,7 +145,7 @@ func postRegister(context *gin.Context) {
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 500,
 		})
-	}else{
+	} else {
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 200,
 		})
@@ -200,10 +200,10 @@ func postLogin(context *gin.Context) {
 		})
 	} else {
 		context.IndentedJSON(http.StatusCreated, gin.H{
-			"code": 200,
-			"email": user.Email,
+			"code":     200,
+			"email":    user.Email,
 			"password": user.Password,
-			"token": user.Token,
+			"token":    user.Token,
 		})
 	}
 }
@@ -683,11 +683,6 @@ func getProductQuery(context *gin.Context) {
 }
 
 func addCart(context *gin.Context) {
-	db, err := sql.Open("mysql", conn)
-	if err != nil {
-		panic(err.Error())
-	}
-	defer db.Close()
 
 	var newCart AddCart
 	newCart.productID = context.Request.FormValue("productID")
@@ -707,6 +702,12 @@ func addCart(context *gin.Context) {
 	fmt.Println(newCart.productImage)
 	fmt.Println(newCart.email)
 
+	db, err := sql.Open("mysql", conn)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	defer db.Close()
 	insert, err := db.Query("INSERT INTO cart (productID, productName, productAmount, productPrice, productTotal, productImage, productAmountData, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", newCart.productID, newCart.productName, newCart.productAmount, newCart.productPrice, newCart.productTotal, newCart.productImage, newCart.productAmountData, newCart.email)
 	if err != nil {
 		context.IndentedJSON(http.StatusCreated, gin.H{
@@ -934,11 +935,11 @@ func AddOrder(context *gin.Context) {
 		email := item["email"].(string)
 
 		hostname := "smtp.gmail.com"
-		auth := smtp.PlainAuth("", "starterkidpiyaman1717@gmail.com", "siwpztupohujvlwq", hostname)
+		auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "nckvsebgdcoaxppj", hostname)
 
-		msg := "From: " + "shop" + "\n" +
-			"To: " + email + "\n" +
-			"Subject: คำสั่งซื้อสินค้า\n\n" +
+		msg := "From: " + "shop" + email + "\n" +
+			"To: " + order.email + "\n" +
+			"Subject: คำสั่งซื้อสินค้า \n\n" +
 			"รหัสสินค้า: " + order.listId + "\n" +
 			"ชื่อสินค้า: " + order.listName + "\n" +
 			"ราคาสินค้า: " + order.listPrice + "\n" +
@@ -948,13 +949,13 @@ func AddOrder(context *gin.Context) {
 			"ที่อยู่จัดส่ง: " + order.address + "\n" +
 			"รอการตรวจสอบจากผู้ดูแลระบบ"
 
-		err := smtp.SendMail(hostname+":587", auth, "from@example.com", []string{email},
-			[]byte(msg))
+		err := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{order.email}, []byte(msg))
 		if err != nil {
 			fmt.Println(err)
 		}
 		fmt.Println("Email Sent!")
 	}
+
 }
 
 func AllOrder(context *gin.Context) {
@@ -1415,7 +1416,7 @@ func ForgotPassword(context *gin.Context) {
 	} else {
 		// hostname is used by PlainAuth to validate the TLS certificate.
 		hostname := "smtp.gmail.com"
-		auth := smtp.PlainAuth("", "sps.equipment.1@gmail.com", "Panadsada2569", hostname)
+		auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "nckvsebgdcoaxppj", hostname)
 
 		password_uuid := uuid.NewRandom()
 		password := password_uuid.String()
@@ -1425,8 +1426,7 @@ func ForgotPassword(context *gin.Context) {
 			"Subject: " + "Forgot Password" + "\n\n" +
 			"Your password is " + password
 
-		err := smtp.SendMail(hostname+":587", auth, "from@example.com", []string{email},
-			[]byte(msg))
+		err := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{email}, []byte(msg))
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -1784,7 +1784,7 @@ func Track(context *gin.Context) {
 	} else {
 		// hostname is used by PlainAuth to validate the TLS certificate.
 		hostname := "smtp.gmail.com"
-		auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "Panadsada2569", hostname)
+		auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "nckvsebgdcoaxppj", hostname)
 
 		msg := "From: " + "shop" + "\n" +
 			"To: " + order.email + "\n" +
@@ -1800,7 +1800,7 @@ func Track(context *gin.Context) {
 			"ที่อยู่จัดส่ง " + order.address + "\n" +
 			"ขอบคุณที่ใช้บริการ"
 
-		err := smtp.SendMail(hostname+":587", auth, "from@example.com", []string{order.email},
+		err := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{order.email},
 			[]byte(msg))
 		if err != nil {
 			fmt.Println(err)
