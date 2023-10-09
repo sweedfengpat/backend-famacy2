@@ -358,12 +358,14 @@ func UpdateProduct(context *gin.Context) {
 	product.productDescription = context.Request.FormValue("productDescription")
 	product.productPrice = context.Request.FormValue("productPrice")
 	product.productAmount = context.Request.FormValue("productAmount")
+
+	var imageName = context.Request.FormValue("imageName")
 	var id = context.Request.FormValue("id")
 
 	var stock_product Product
 	err = db.QueryRow("SELECT productImage FROM product WHERE id=?", id).Scan(&stock_product.productImage)
 	fmt.Println(stock_product.productImage)
-	if err != nil {
+		if err != nil {
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 500,
 		})
@@ -371,17 +373,32 @@ func UpdateProduct(context *gin.Context) {
 	}
 
 	file, _, err := context.Request.FormFile("upload")
-	fmt.Println("File")
-	fmt.Println(file)
-	filename := stock_product.productImage
-	out, err := os.Create("./tmp/" + filename)
-	defer out.Close()
-	_, err = io.Copy(out, file)
+	// var image = context.Request.FormValue("upload")
+	// fmt.Println("111", image)
+	fmt.Println(imageName, "123")
+	if imageName != "" && file != nil {
+
+		fmt.Println("File")
+		fmt.Println(file)
+		// filename := stock_product.productImage
+		out, err := os.Create("./tmp/" + imageName)
+		defer out.Close()
+		_, err = io.Copy(out, file)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		insert, err := db.Query("UPDATE product SET productImage=? WHERE id=?" , imageName , id)
 	if err != nil {
+		context.IndentedJSON(http.StatusCreated, gin.H{
+			"code": 500,
+		})
 		fmt.Println(err.Error())
 	}
+	defer insert.Close()
 
-	insert, err := db.Query("UPDATE product SET productType=?, productCode=?, productName=?, productDescription=?, productPrice=?, productAmount=? WHERE id=?", product.productType, product.productCode, product.productName, product.productDescription, product.productPrice, product.productAmount, id)
+	}
+	
+	insert, err := db.Query("UPDATE product SET productType=?, productCode=?, productName=?, productDescription=?, productPrice=?, productAmount=? WHERE id=?" ,product.productType, product.productCode, product.productName, product.productDescription, product.productPrice, product.productAmount, id)
 	if err != nil {
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 500,
@@ -1782,6 +1799,7 @@ func Track(context *gin.Context) {
 			"code": 500,
 		})
 	} else {
+		fmt.Println(order)
 		// hostname is used by PlainAuth to validate the TLS certificate.
 		hostname := "smtp.gmail.com"
 		auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "nckvsebgdcoaxppj", hostname)
