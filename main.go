@@ -365,7 +365,7 @@ func UpdateProduct(context *gin.Context) {
 	var stock_product Product
 	err = db.QueryRow("SELECT productImage FROM product WHERE id=?", id).Scan(&stock_product.productImage)
 	fmt.Println(stock_product.productImage)
-		if err != nil {
+	if err != nil {
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 500,
 		})
@@ -387,18 +387,18 @@ func UpdateProduct(context *gin.Context) {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		insert, err := db.Query("UPDATE product SET productImage=? WHERE id=?" , imageName , id)
-	if err != nil {
-		context.IndentedJSON(http.StatusCreated, gin.H{
-			"code": 500,
-		})
-		fmt.Println(err.Error())
-	}
-	defer insert.Close()
+		insert, err := db.Query("UPDATE product SET productImage=? WHERE id=?", imageName, id)
+		if err != nil {
+			context.IndentedJSON(http.StatusCreated, gin.H{
+				"code": 500,
+			})
+			fmt.Println(err.Error())
+		}
+		defer insert.Close()
 
 	}
-	
-	insert, err := db.Query("UPDATE product SET productType=?, productCode=?, productName=?, productDescription=?, productPrice=?, productAmount=? WHERE id=?" ,product.productType, product.productCode, product.productName, product.productDescription, product.productPrice, product.productAmount, id)
+
+	insert, err := db.Query("UPDATE product SET productType=?, productCode=?, productName=?, productDescription=?, productPrice=?, productAmount=? WHERE id=?", product.productType, product.productCode, product.productName, product.productDescription, product.productPrice, product.productAmount, id)
 	if err != nil {
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 500,
