@@ -193,17 +193,19 @@ func postLogin(context *gin.Context) {
 		return
 	}
 
-	err = db.QueryRow("SELECT email, password, token FROM users where email = ? AND password = ?", newLogin.Email, newLogin.Password).Scan(&user.Email, &user.Password, &user.Token)
+	err = db.QueryRow("SELECT email, password, firstName, lastName, token FROM users where email = ? AND password = ?", newLogin.Email, newLogin.Password).Scan(&user.Email, &user.Password, &user.FirstName, &user.LastName, &user.Token)
 	if err != nil {
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 500,
 		})
 	} else {
 		context.IndentedJSON(http.StatusCreated, gin.H{
-			"code":     200,
-			"email":    user.Email,
-			"password": user.Password,
-			"token":    user.Token,
+			"code":      200,
+			"email":     user.Email,
+			"password":  user.Password,
+			"firstName": user.FirstName,
+			"lastName":  user.LastName,
+			"token":     user.Token,
 		})
 	}
 }
@@ -528,7 +530,7 @@ func AllAddress(context *gin.Context) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("SELECT * FROM address WHERE email=? AND password=?", context.Request.FormValue("email"), context.Request.FormValue("password"))
+	rows, err := db.Query("SELECT * FROM address WHERE email=? ", context.Request.FormValue("email"))
 	if err != nil {
 		fmt.Println(err.Error())
 	}
