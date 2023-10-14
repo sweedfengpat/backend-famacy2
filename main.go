@@ -10,6 +10,23 @@ import (
 	"os"
 	"strings"
 
+	"bytes"
+  	"time"
+
+	"strconv"
+
+	"log"
+	"server/app/config"
+	services "server/app/service"
+
+	"github.com/johnfercher/maroto/pkg/color"
+    "github.com/johnfercher/maroto/pkg/consts"
+    "github.com/johnfercher/maroto/pkg/pdf"
+    "github.com/johnfercher/maroto/pkg/props"
+
+	"github.com/joho/godotenv"
+	"gopkg.in/gomail.v2"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -883,6 +900,9 @@ func AddOrder(context *gin.Context) {
 	order.day = context.Request.FormValue("day")
 	order.slipImage = filename
 
+	var firstName = context.Request.FormValue("firstName")
+	var lastName = context.Request.FormValue("lastName")
+
 	insert, err := db.Query("INSERT INTO `order` (`code`, `listName`, `listPrice`, `listAmount`, `listImage`, `listId`, `email`, `address`, `total`, `day`, `slipImage`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", uuid, order.listName, order.listPrice, order.listAmount, order.listImage, order.listId, order.email, order.address, order.total, order.day, order.slipImage)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -955,7 +975,7 @@ func AddOrder(context *gin.Context) {
 
 		hostname := "smtp.gmail.com"
 		auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "nckvsebgdcoaxppj", hostname)
-
+		//----costomer
 		msg := "From: " + "shop" + email + "\n" +
 			"To: " + order.email + "\n" +
 			"Subject: คำสั่งซื้อสินค้า \n\n" +
@@ -971,6 +991,26 @@ func AddOrder(context *gin.Context) {
 		err := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{order.email}, []byte(msg))
 		if err != nil {
 			fmt.Println(err)
+		}
+		fmt.Println("Email Sent!")
+		///---admin
+		msg1 := "From: " + "shop" + email + "\n" +
+			"To: " + email + "\n" +
+			"Subject: คำสั่งซื้อสินค้า \n\n" +
+			"คำสั่งซื้อจาก: " + order.email + "\n" +
+			"ชื่อลูกค้า: " + firstName + " " + lastName + "\n" +
+			"รหัสสินค้า: " + order.listId + "\n" +
+			"ชื่อสินค้า: " + order.listName + "\n" +
+			"ราคาสินค้า: " + order.listPrice + "\n" +
+			"จำนวนสินค้า: " + order.listAmount + "\n" +
+			"ราคารวม: " + order.total + "\n" +
+			"วันที่สั่งซื้อ: " + order.day + "\n" +
+			"ที่อยู่จัดส่ง: " + order.address + "\n" +
+			"รอการตรวจสอบจากผู้ดูแลระบบ"
+
+		err1 := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{"B6118693@g.sut.ac.th"}, []byte(msg1))
+		if err1 != nil {
+			fmt.Println(err1)
 		}
 		fmt.Println("Email Sent!")
 	}
@@ -1785,6 +1825,13 @@ func Track(context *gin.Context) {
 	var id = context.Request.FormValue("id")
 	var description = context.Request.FormValue("description")
 
+	var about about
+	err = db.QueryRow("SELECT name, phone, address FROM about").Scan(&about.name, &about.phone, &about.address)
+if err != nil {
+    // Handle the error, e.g., log it or return an error response
+    panic(err)
+}
+	
 	fmt.Println(track + " " + id + " " + description)
 	update, err := db.Query("UPDATE `order` SET `track` = ? WHERE `id` = ?", track, id)
 	if err != nil {
@@ -1801,31 +1848,59 @@ func Track(context *gin.Context) {
 			"code": 500,
 		})
 	} else {
+		fmt.Println("555");
 		fmt.Println(order)
-		// hostname is used by PlainAuth to validate the TLS certificate.
-		hostname := "smtp.gmail.com"
-		auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "nckvsebgdcoaxppj", hostname)
+		// // hostname is used by PlainAuth to validate the TLS certificate.
+		// hostname := "smtp.gmail.com"
+		// auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "nckvsebgdcoaxppj", hostname)
 
-		msg := "From: " + "shop" + "\n" +
-			"To: " + order.email + "\n" +
-			"Subject: " + " ข้อมูลการขนส่ง" + "\n\n" +
-			"บริษัทขนส่ง " + company + "\n " +
-			"เลขพัสดุของคุณคือ " + track + "\n" +
-			"รายละเอียดเพิ่มเติม " + description + "\n" +
-			"รายการสั่งซื้อ " + order.listName + "\n" +
-			"ราคา " + order.listPrice + "\n" +
-			"จำนวน " + order.listAmount + "\n" +
-			"รวม " + order.total + "\n" +
-			"วันที่สั่งซื้อ " + order.day + "\n" +
-			"ที่อยู่จัดส่ง " + order.address + "\n" +
-			"ขอบคุณที่ใช้บริการ"
+		// msg := "From: " + "shop" + "\n" +
+		// 	"To: " + order.email + "\n" +
+		// 	"Subject: " + " ข้อมูลการขนส่ง" + "\n\n" +
+		// 	"บริษัทขนส่ง " + company + "\n " +
+		// 	"เลขพัสดุของคุณคือ " + track + "\n" +
+		// 	"รายละเอียดเพิ่มเติม " + description + "\n" +
+		// 	"รายการสั่งซื้อ " + order.listName + "\n" +
+		// 	"ราคา " + order.listPrice + "\n" +
+		// 	"จำนวน " + order.listAmount + "\n" +
+		// 	"รวม " + order.total + "\n" +
+		// 	"วันที่สั่งซื้อ " + order.day + "\n" +
+		// 	"ที่อยู่จัดส่ง " + order.address + "\n" +
+		// 	"ขอบคุณที่ใช้บริการ"
 
-		err := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{order.email},
-			[]byte(msg))
+		// err := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{order.email},
+		// 	[]byte(msg))
+		// if err != nil {
+		// 	fmt.Println(err)
+		// }
+		// fmt.Println("Email Sent!")
+
+		err := godotenv.Load()
 		if err != nil {
-			fmt.Println(err)
+			log.Fatal("Error loading .env file")
 		}
-		fmt.Println("Email Sent!")
+				
+		config.ConnectMailer(
+			os.Getenv("MAILER_HOST"),
+			os.Getenv("MAILER_USERNAME"),
+			os.Getenv("MAILER_PASSWORD"),
+		)
+
+		GeneratePDF(about, order)
+		m := services.Mailer{}
+		message := gomail.NewMessage()
+		message.SetHeader("To", order.email)
+		message.SetHeader("Subject", "ข้อมูลการขนส่ง")
+		message.SetBody("text/html", "บริษัทขนส่ง "+company+"<br>"+
+			"เลขพัสดุของคุณคือ "+track+"<br>"+"รายละเอียดเพิ่มเติม "+description+"<br>"+
+			"รายการสั่งซื้อ "+order.listName+"<br>"+"ราคา "+order.listPrice+"<br>"+
+			"จำนวน "+order.listAmount+"<br>"+"รวม "+order.total+"<br>"+
+			"วันที่สั่งซื้อ "+order.day+"<br>"+"ที่อยู่จัดส่ง "+order.address+"<br>"+"ขอบคุณที่ใช้บริการ")
+
+		message.Attach("file/ใบเสร็จรับเงิน.pdf")
+		m.Send(message)
+
+		fmt.Println("Email Sent Successfully!")
 
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 200,
@@ -1833,6 +1908,171 @@ func Track(context *gin.Context) {
 
 	}
 
+}
+func getHeader() []string {
+    return []string{"ลำดับ", "ชื่อสินค้า", "จำนวน", "ราคา"}
+}
+
+func getContents(order getOrder) [][]string {
+	product := order.listName
+	amount := order.listAmount
+	price := order.listPrice
+	fmt.Println("product",product)
+	fmt.Println("amount",amount)
+	fmt.Println("price",price)
+    // Split the input strings into slices
+    productParts := strings.Split(product, ",")
+    amountParts := strings.Split(amount, ",")
+    priceParts := strings.Split(price, ",")
+
+    // Determine the number of elements in the input
+    n := len(productParts)
+
+    // Create a slice of slices to organize the data
+    data := make([][]string, n)
+
+    // Populate the data with the corresponding values
+    for i := 0; i < n; i++ {
+        data[i] = []string{strconv.Itoa(i+1),productParts[i], amountParts[i], priceParts[i]}
+    }
+
+return data
+}
+
+func GeneratePDF(about about, order getOrder) (bytes.Buffer, error) {
+	begin := time.Now()
+	header := getHeader()
+	contents := getContents(order)
+	
+
+	m := pdf.NewMaroto(consts.Portrait, consts.A4)
+	m.AddUTF8Font("THSarabun", consts.Normal, "./font/THSarabunNew.ttf")
+	m.AddUTF8Font("THSarabun", consts.Italic, "./font/THSarabunNew Italic.ttf")
+	m.AddUTF8Font("THSarabun", consts.Bold, "./font/THSarabunNew Bold.ttf")
+	m.AddUTF8Font("THSarabun", consts.BoldItalic, "./font/THSarabunNew BoldItalic.ttf")
+	m.SetDefaultFontFamily("THSarabun")
+	m.SetPageMargins(10, 15, 10)
+
+	
+
+	m.RegisterHeader(func() {
+		m.Row(20, func() {
+
+			m.Col(3, func() {
+				m.Text(about.name, props.Text{
+					Size:        8,
+					Align:       consts.Right,
+					Extrapolate: false,
+				})
+				m.Text(about.phone, props.Text{
+					Top:   12,
+					Style: consts.BoldItalic,
+					Size:  8,
+					Align: consts.Right,
+				})
+				m.Text(about.address, props.Text{
+					Top:   15,
+					Style: consts.BoldItalic,
+					Size:  8,
+					Align: consts.Right,
+				})
+			})
+		})
+	})
+
+	m.RegisterFooter(func() {
+		m.Row(20, func() {
+			m.Col(12, func() {
+				m.Text(about.phone, props.Text{
+					Top:   13,
+					Style: consts.BoldItalic,
+					Size:  8,
+					Align: consts.Left,
+				})
+				m.Text(about.address, props.Text{
+					Top:   16,
+					Style: consts.BoldItalic,
+					Size:  8,
+					Align: consts.Left,
+				})
+			})
+		})
+	})
+
+	m.Row(10, func() {
+		m.Col(12, func() {
+			m.Text("ใบเสร็จรับเงิน "+about.name, props.Text{
+				Top:   3,
+				Style: consts.Bold,
+				Align: consts.Center,
+			})
+		})
+	})
+
+	m.Row(7, func() {
+		m.Col(3, func() {
+			m.Text("Transactions", props.Text{
+				Top:   1.5,
+				Size:  9,
+				Style: consts.Bold,
+				Align: consts.Center,
+				Color: color.NewWhite(),
+			})
+		})
+		m.ColSpace(9)
+	})
+
+	m.TableList(header, contents, props.TableList{
+		HeaderProp: props.TableListContent{
+			Size:      9,
+			GridSizes: []uint{3, 4, 2, 3},
+		},
+		ContentProp: props.TableListContent{
+			Size:      8,
+			GridSizes: []uint{3, 4, 2, 3},
+		},
+		Align:              consts.Center,
+		HeaderContentSpace: 1,
+		Line:               false,
+	})
+
+	m.Row(20, func() {
+		m.ColSpace(5)
+		m.Col(2, func() {
+			m.Text("จำนวนเงิน", props.Text{
+				Top:   5,
+				Style: consts.Bold,
+				Size:  8,
+				Align: consts.Right,
+			})
+		})
+		m.Col(2, func() {
+			m.Text(order.total, props.Text{
+				Top:   5,
+				Style: consts.Bold,
+				Size:  8,
+				Align: consts.Center,
+			})
+		})
+		m.Col(3, func() {
+			m.Text("บาท", props.Text{
+				Top:   5,
+				Style: consts.Bold,
+				Size:  8,
+				Align: consts.Center,
+			})
+		})
+	})
+
+	end := time.Now()
+	err := m.OutputFileAndClose("file/ใบเสร็จรับเงิน.pdf")
+	if err != nil {
+		fmt.Println("Could not save PDF:", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("time generate", end.Sub(begin))
+	return m.Output()
 }
 
 // user ------------------ end
