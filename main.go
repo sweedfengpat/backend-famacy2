@@ -92,6 +92,11 @@ type Login struct {
 	LastName  string `json: "lastName"`
 }
 
+type User struct{
+	FirstName string 
+	LastName  string 
+	Address   string
+}
 type Order struct {
 	listName   string `json: "listName"`
 	listPrice  string `json: "listPrice"`
@@ -188,13 +193,42 @@ func postUpdateProfile(context *gin.Context) {
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 500,
 		})
-	}
-	defer update.Close()
-	fmt.Println("values added!")
+	}else{
+		var user Login
+		err := db.QueryRow("SELECT email, firstName, lastName, token from users WHERE email = ?",newUpdateProfile.Email).Scan(&user.Email, &user.FirstName, &user.LastName, &user.Token)
+		
+		if err != nil {
+			context.IndentedJSON(http.StatusCreated, gin.H{
+				"code": 500,
+			})
+		} 
 
-	context.IndentedJSON(http.StatusCreated, gin.H{
-		"code": 200,
-	})
+		context.IndentedJSON(http.StatusCreated, gin.H{
+			"code":      200,
+			"email":     user.Email,
+			"firstName": user.FirstName,
+			"lastName":  user.LastName,
+			"token":     user.Token,
+		})
+		defer update.Close()
+		fmt.Println("values added!")
+	}
+	// err = db.QueryRow("SELECT email, password, firstName, lastName, token FROM users where email = ? AND password = ?", newLogin.Email, newLogin.Password).Scan(&user.Email, &user.Password, &user.FirstName, &user.LastName, &user.Token)
+	// if err != nil {
+	// 	context.IndentedJSON(http.StatusCreated, gin.H{
+	// 		"code": 500,
+	// 	})
+	// } else {
+	// 	// context.IndentedJSON(http.StatusCreated, gin.H{
+	// 	// 	"code":      200,
+	// 	// 	"email":     user.Email,
+	// 	// 	"password":  user.Password,
+	// 	// 	"firstName": user.FirstName,
+	// 	// 	"lastName":  user.LastName,
+	// 	// 	"token":     user.Token,
+	// 	// })
+	// }
+
 }
 
 func postLogin(context *gin.Context) {
@@ -1939,12 +1973,24 @@ func getContents(order getOrder) [][]string {
 return data
 }
 
-func GeneratePDF(about about, order getOrder) (bytes.Buffer, error) {
+func GeneratePDF(about about, order getOrder ) (bytes.Buffer, error) {
 	begin := time.Now()
 	header := getHeader()
 	contents := getContents(order)
 	
+	db, err := sql.Open("mysql", conn)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer db.Close()
 
+	var user User
+	err = db.QueryRow("SELECT  firstName, lastName, address FROM users where email=?",order.email).Scan(&user.FirstName, &user.LastName, &user.Address)
+if err != nil {
+    // Handle the error, e.g., log it or return an error response
+    panic(err)
+}
+	
 	m := pdf.NewMaroto(consts.Portrait, consts.A4)
 	m.AddUTF8Font("THSarabun", consts.Normal, "./font/THSarabunNew.ttf")
 	m.AddUTF8Font("THSarabun", consts.Italic, "./font/THSarabunNew Italic.ttf")
@@ -2001,6 +2047,26 @@ func GeneratePDF(about about, order getOrder) (bytes.Buffer, error) {
 
 	m.Row(10, func() {
 		m.Col(12, func() {
+			m.Text("ชื่อลูกค้า: "+ user.FirstName + " " + user.LastName , props.Text{
+				Top:   3,
+				Style: consts.Bold,
+				Align: consts.Right,
+			})
+		})
+	})
+
+	m.Row(10, func() {
+		m.Col(12, func() {
+			m.Text("ที่อยู่: "+ order.address, props.Text{
+				Top:   3,
+				Style: consts.Bold,
+				Align: consts.Right,
+			})
+		})
+	})
+
+	m.Row(10, func() {
+		m.Col(12, func() {
 			m.Text("ใบเสร็จรับเงิน "+about.name, props.Text{
 				Top:   3,
 				Style: consts.Bold,
@@ -2008,6 +2074,7 @@ func GeneratePDF(about about, order getOrder) (bytes.Buffer, error) {
 			})
 		})
 	})
+
 
 	m.Row(7, func() {
 		m.Col(3, func() {
@@ -2065,7 +2132,7 @@ func GeneratePDF(about about, order getOrder) (bytes.Buffer, error) {
 	})
 
 	end := time.Now()
-	err := m.OutputFileAndClose("file/ใบเสร็จรับเงิน.pdf")
+	err = m.OutputFileAndClose("file/ใบเสร็จรับเงิน.pdf")
 	if err != nil {
 		fmt.Println("Could not save PDF:", err)
 		os.Exit(1)
