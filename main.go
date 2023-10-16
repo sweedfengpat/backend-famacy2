@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"bytes"
-  	"time"
+	"time"
 
 	"strconv"
 
@@ -20,9 +20,9 @@ import (
 	services "server/app/service"
 
 	"github.com/johnfercher/maroto/pkg/color"
-    "github.com/johnfercher/maroto/pkg/consts"
-    "github.com/johnfercher/maroto/pkg/pdf"
-    "github.com/johnfercher/maroto/pkg/props"
+	"github.com/johnfercher/maroto/pkg/consts"
+	"github.com/johnfercher/maroto/pkg/pdf"
+	"github.com/johnfercher/maroto/pkg/props"
 
 	"github.com/joho/godotenv"
 	"gopkg.in/gomail.v2"
@@ -92,9 +92,9 @@ type Login struct {
 	LastName  string `json: "lastName"`
 }
 
-type User struct{
-	FirstName string 
-	LastName  string 
+type User struct {
+	FirstName string
+	LastName  string
 	Address   string
 }
 type Order struct {
@@ -193,15 +193,15 @@ func postUpdateProfile(context *gin.Context) {
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code": 500,
 		})
-	}else{
+	} else {
 		var user Login
-		err := db.QueryRow("SELECT email, firstName, lastName, token from users WHERE email = ?",newUpdateProfile.Email).Scan(&user.Email, &user.FirstName, &user.LastName, &user.Token)
-		
+		err := db.QueryRow("SELECT email, firstName, lastName, token from users WHERE email = ?", newUpdateProfile.Email).Scan(&user.Email, &user.FirstName, &user.LastName, &user.Token)
+
 		if err != nil {
 			context.IndentedJSON(http.StatusCreated, gin.H{
 				"code": 500,
 			})
-		} 
+		}
 
 		context.IndentedJSON(http.StatusCreated, gin.H{
 			"code":      200,
@@ -1315,7 +1315,7 @@ func AllOrderPayment(context *gin.Context) {
 	var month = context.Request.FormValue("month")
 	var year = context.Request.FormValue("year")
 
-	rows, err := db.Query("SELECT * FROM `order` WHERE NOT `status`='รอตรวจสอบ' AND NOT `status`='ล้มเหลว' AND `day` LIKE '%" + month + "/" + year + "'")
+	rows, err := db.Query("SELECT * FROM `order` WHERE NOT `status`='รอตรวจสอบ' AND NOT `status`='ล้มเหลว' AND `day` LIKE '%" + month + "/" + year + "%'")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -1861,11 +1861,11 @@ func Track(context *gin.Context) {
 
 	var about about
 	err = db.QueryRow("SELECT name, phone, address FROM about").Scan(&about.name, &about.phone, &about.address)
-if err != nil {
-    // Handle the error, e.g., log it or return an error response
-    panic(err)
-}
-	
+	if err != nil {
+		// Handle the error, e.g., log it or return an error response
+		panic(err)
+	}
+
 	fmt.Println(track + " " + id + " " + description)
 	update, err := db.Query("UPDATE `order` SET `track` = ? WHERE `id` = ?", track, id)
 	if err != nil {
@@ -1882,7 +1882,7 @@ if err != nil {
 			"code": 500,
 		})
 	} else {
-		fmt.Println("555");
+		fmt.Println("555")
 		fmt.Println(order)
 		// // hostname is used by PlainAuth to validate the TLS certificate.
 		// hostname := "smtp.gmail.com"
@@ -1913,7 +1913,7 @@ if err != nil {
 		if err != nil {
 			log.Fatal("Error loading .env file")
 		}
-				
+
 		config.ConnectMailer(
 			os.Getenv("MAILER_HOST"),
 			os.Getenv("MAILER_USERNAME"),
@@ -1944,40 +1944,40 @@ if err != nil {
 
 }
 func getHeader() []string {
-    return []string{"ลำดับ", "ชื่อสินค้า", "จำนวน", "ราคา"}
+	return []string{"ลำดับ", "ชื่อสินค้า", "จำนวน", "ราคา"}
 }
 
 func getContents(order getOrder) [][]string {
 	product := order.listName
 	amount := order.listAmount
 	price := order.listPrice
-	fmt.Println("product",product)
-	fmt.Println("amount",amount)
-	fmt.Println("price",price)
-    // Split the input strings into slices
-    productParts := strings.Split(product, ",")
-    amountParts := strings.Split(amount, ",")
-    priceParts := strings.Split(price, ",")
+	fmt.Println("product", product)
+	fmt.Println("amount", amount)
+	fmt.Println("price", price)
+	// Split the input strings into slices
+	productParts := strings.Split(product, ",")
+	amountParts := strings.Split(amount, ",")
+	priceParts := strings.Split(price, ",")
 
-    // Determine the number of elements in the input
-    n := len(productParts)
+	// Determine the number of elements in the input
+	n := len(productParts)
 
-    // Create a slice of slices to organize the data
-    data := make([][]string, n)
+	// Create a slice of slices to organize the data
+	data := make([][]string, n)
 
-    // Populate the data with the corresponding values
-    for i := 0; i < n; i++ {
-        data[i] = []string{strconv.Itoa(i+1),productParts[i], amountParts[i], priceParts[i]}
-    }
+	// Populate the data with the corresponding values
+	for i := 0; i < n; i++ {
+		data[i] = []string{strconv.Itoa(i + 1), productParts[i], amountParts[i], priceParts[i]}
+	}
 
-return data
+	return data
 }
 
-func GeneratePDF(about about, order getOrder ) (bytes.Buffer, error) {
+func GeneratePDF(about about, order getOrder) (bytes.Buffer, error) {
 	begin := time.Now()
 	header := getHeader()
 	contents := getContents(order)
-	
+
 	db, err := sql.Open("mysql", conn)
 	if err != nil {
 		panic(err.Error())
@@ -1985,12 +1985,12 @@ func GeneratePDF(about about, order getOrder ) (bytes.Buffer, error) {
 	defer db.Close()
 
 	var user User
-	err = db.QueryRow("SELECT  firstName, lastName, address FROM users where email=?",order.email).Scan(&user.FirstName, &user.LastName, &user.Address)
-if err != nil {
-    // Handle the error, e.g., log it or return an error response
-    panic(err)
-}
-	
+	err = db.QueryRow("SELECT  firstName, lastName, address FROM users where email=?", order.email).Scan(&user.FirstName, &user.LastName, &user.Address)
+	if err != nil {
+		// Handle the error, e.g., log it or return an error response
+		panic(err)
+	}
+
 	m := pdf.NewMaroto(consts.Portrait, consts.A4)
 	m.AddUTF8Font("THSarabun", consts.Normal, "./font/THSarabunNew.ttf")
 	m.AddUTF8Font("THSarabun", consts.Italic, "./font/THSarabunNew Italic.ttf")
@@ -1998,8 +1998,6 @@ if err != nil {
 	m.AddUTF8Font("THSarabun", consts.BoldItalic, "./font/THSarabunNew BoldItalic.ttf")
 	m.SetDefaultFontFamily("THSarabun")
 	m.SetPageMargins(10, 15, 10)
-
-	
 
 	m.RegisterHeader(func() {
 		m.Row(20, func() {
@@ -2047,7 +2045,7 @@ if err != nil {
 
 	m.Row(10, func() {
 		m.Col(12, func() {
-			m.Text("ชื่อลูกค้า: "+ user.FirstName + " " + user.LastName , props.Text{
+			m.Text("ชื่อลูกค้า: "+user.FirstName+" "+user.LastName, props.Text{
 				Top:   3,
 				Style: consts.Bold,
 				Align: consts.Right,
@@ -2057,7 +2055,7 @@ if err != nil {
 
 	m.Row(10, func() {
 		m.Col(12, func() {
-			m.Text("ที่อยู่: "+ order.address, props.Text{
+			m.Text("ที่อยู่: "+order.address, props.Text{
 				Top:   3,
 				Style: consts.Bold,
 				Align: consts.Right,
@@ -2074,7 +2072,6 @@ if err != nil {
 			})
 		})
 	})
-
 
 	m.Row(7, func() {
 		m.Col(3, func() {
