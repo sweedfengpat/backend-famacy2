@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/boombuler/barcode v1.0.1 // indirect
+	github.com/go-mail/mail v2.3.1+incompatible // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/ruudk/golang-pdf417 v0.0.0-20201230142125-a7e3863a1245 // indirect
 )

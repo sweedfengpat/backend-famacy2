@@ -15,14 +15,14 @@ import (
 
 	"strconv"
 
-	"log"
-	"server/app/config"
-	services "server/app/service"
-
 	"github.com/johnfercher/maroto/pkg/color"
 	"github.com/johnfercher/maroto/pkg/consts"
 	"github.com/johnfercher/maroto/pkg/pdf"
 	"github.com/johnfercher/maroto/pkg/props"
+	"html/template"
+	"log"
+	"server/app/config"
+	services "server/app/service"
 
 	"github.com/joho/godotenv"
 	"gopkg.in/gomail.v2"
@@ -149,7 +149,67 @@ type addressGet struct {
 	address string `json: "address"`
 }
 
+type MyGetOrder struct {
+	Original getOrder
+}
+
+type MyOrder struct {
+	Original Order
+}
+
 var conn = "root:root@tcp(127.0.0.1:3306)/gostoredb"
+
+func (m MyGetOrder) ListName() string {
+	return m.Original.listName
+}
+
+func (m MyGetOrder) ListPrice() string {
+	return m.Original.listPrice
+}
+
+func (m MyGetOrder) ListAmount() string {
+	return m.Original.listAmount
+}
+
+func (m MyGetOrder) Total() string {
+	return m.Original.total
+}
+
+func (m MyGetOrder) Day() string {
+	return m.Original.day
+}
+
+func (m MyGetOrder) Address() string {
+	return m.Original.address
+}
+
+func (m MyOrder) ListName() string {
+	return m.Original.listName
+}
+
+func (m MyOrder) ListPrice() string {
+	return m.Original.listPrice
+}
+
+func (m MyOrder) ListAmount() string {
+	return m.Original.listAmount
+}
+
+func (m MyOrder) Total() string {
+	return m.Original.total
+}
+
+func (m MyOrder) Day() string {
+	return m.Original.day
+}
+
+func (m MyOrder) Address() string {
+	return m.Original.address
+}
+
+func (m MyOrder) Email() string {
+	return m.Original.email
+}
 
 func postRegister(context *gin.Context) {
 	db, err := sql.Open("mysql", conn)
@@ -1007,45 +1067,177 @@ func AddOrder(context *gin.Context) {
 
 		email := item["email"].(string)
 
-		hostname := "smtp.gmail.com"
-		auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "nckvsebgdcoaxppj", hostname)
-		//----costomer
-		msg := "From: " + "shop" + email + "\n" +
-			"To: " + order.email + "\n" +
-			"Subject: คำสั่งซื้อสินค้า \n\n" +
-			"รหัสสินค้า: " + order.listId + "\n" +
-			"ชื่อสินค้า: " + order.listName + "\n" +
-			"ราคาสินค้า: " + order.listPrice + "\n" +
-			"จำนวนสินค้า: " + order.listAmount + "\n" +
-			"ราคารวม: " + order.total + "\n" +
-			"วันที่สั่งซื้อ: " + order.day + "\n" +
-			"ที่อยู่จัดส่ง: " + order.address + "\n" +
-			"รอการตรวจสอบจากผู้ดูแลระบบ"
-
-		err := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{order.email}, []byte(msg))
+		err := godotenv.Load()
 		if err != nil {
-			fmt.Println(err)
+			log.Fatal("Error loading .env file")
 		}
-		fmt.Println("Email Sent!")
-		///---admin
-		msg1 := "From: " + "shop" + email + "\n" +
-			"To: " + email + "\n" +
-			"Subject: คำสั่งซื้อสินค้า \n\n" +
-			"คำสั่งซื้อจาก: " + order.email + "\n" +
-			"ชื่อลูกค้า: " + firstName + " " + lastName + "\n" +
-			"รหัสสินค้า: " + order.listId + "\n" +
-			"ชื่อสินค้า: " + order.listName + "\n" +
-			"ราคาสินค้า: " + order.listPrice + "\n" +
-			"จำนวนสินค้า: " + order.listAmount + "\n" +
-			"ราคารวม: " + order.total + "\n" +
-			"วันที่สั่งซื้อ: " + order.day + "\n" +
-			"ที่อยู่จัดส่ง: " + order.address + "\n" +
-			"รอการตรวจสอบจากผู้ดูแลระบบ"
 
-		err1 := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{"B6118693@g.sut.ac.th"}, []byte(msg1))
-		if err1 != nil {
-			fmt.Println(err1)
+		config.ConnectMailer(
+			os.Getenv("MAILER_HOST"),
+			os.Getenv("MAILER_USERNAME"),
+			os.Getenv("MAILER_PASSWORD"),
+		)
+
+		m := services.Mailer{}
+		// contents := getContents(order)
+		content := []string{order.listName, order.listAmount, order.listPrice}
+		fmt.Println("1 content", content)
+		// math content array from index
+		contents := [][]string{}
+		orderlistName := strings.Split(order.listName, ",")
+		orderlistAmount := strings.Split(order.listAmount, ",")
+		orderlistPrice := strings.Split(order.listPrice, ",")
+		for i := 0; i < len(orderlistName); i++ {
+			contents = append(contents, []string{strconv.Itoa(i + 1), orderlistName[i], orderlistAmount[i], orderlistPrice[i]})
 		}
+		fmt.Println("2 contents", contents)
+
+		message := gomail.NewMessage()
+		message.SetHeader("From", "shop"+email)
+		message.SetHeader("To", order.email)
+		message.SetHeader("Subject", "คำสั่งซื้อสินค้า")
+		//----costomer
+		emailTemplateCustomer :=
+			`
+		<!DOCTYPE html>
+		<html>
+		<head>
+		<title>HTML Email with Loop</title>
+			<style>
+				table {
+					border-collapse: collapse;
+					width: 100%;
+				}
+				th, td {
+					text-align: left;
+					padding: 8px;
+				}
+				tr:nth-child(even){background-color: #f2f2f2}
+				th {
+					background-color: #4CAF50;
+					color: white;
+				}
+			</style>
+		</head>
+		<body>
+			<h4>วันที่สั่งซื้อ {{.Order.Day}}</h4>
+			<h4>ที่อยู่จัดส่ง {{.Order.Address}}</h4>
+			<table>
+				<tr>
+					<th>ลำดับ</th>
+					<th>ชื่อสินค้า</th>
+					<th>จำนวน</th>
+					<th>ราคา</th>
+				</tr>
+				{{range $index, $element := .Contents}}
+				<tr>
+					{{range $index1, $element1 := $element}}
+					<td>{{$element1}}</td>
+					{{end}}
+				</tr>
+				{{end}}
+			</table>
+			<h4>รวมเป็นเงินทั้งหมด {{.Order.Total}} บาท</h4>
+		
+			<h4>รอการตรวจสอบคำสั่งซื้อจากผู้ดูแลระบบ</h4>
+		</body>
+	</html>`
+
+		data := struct {
+			Contents [][]string
+			Order    MyOrder
+		}{
+			Contents: contents,
+			Order:    MyOrder{Original: order},
+		}
+
+		t := template.Must(template.New("emailTemplate").Parse(emailTemplateCustomer))
+		var tplBuffer bytes.Buffer
+		if err := t.Execute(&tplBuffer, data); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("3 data", tplBuffer.String())
+		message.SetBody("text/html", tplBuffer.String())
+		m.Send(message)
+		fmt.Println("Email customer Sent Successfully!")
+
+		//----admin
+		message.SetHeader("From", "shop"+email)
+		message.SetHeader("To",	"B6118693@g.sut.ac.th")
+		message.SetHeader("Subject", "คำสั่งซื้อสินค้า")
+		emailTemplateAdmin :=
+			`
+		<!DOCTYPE html>
+		<html>
+		<head>
+		<title>HTML Email with Loop</title>
+			<style>
+				table {
+					border-collapse: collapse;
+					width: 100%;
+				}
+				th, td {
+					text-align: left;
+					padding: 8px;
+				}
+				tr:nth-child(even){background-color: #f2f2f2}
+				th {
+					background-color: #4CAF50;
+					color: white;
+				}
+			</style>
+		</head>
+		<body>
+			<h4>รายการสั่งซื้อจาก {{.Order.Email}}</h4>
+			<h4>ชื่อลูกกค้า {{.Firstname}} {{.Lastname}}</h4>
+			<h4>วันที่สั่งซื้อ {{.Order.Day}}</h4>
+			<h4>ที่อยู่จัดส่ง {{.Order.Address}}</h4>
+			<table>
+				<tr>
+					<th>ลำดับ</th>
+					<th>ชื่อสินค้า</th>
+					<th>จำนวน</th>
+					<th>ราคา</th>
+				</tr>
+				{{range $index, $element := .Contents}}
+				<tr>
+					{{range $index1, $element1 := $element}}
+					<td>{{$element1}}</td>
+					{{end}}
+				</tr>
+				{{end}}
+			</table>
+			<h4>รวมเป็นเงินทั้งหมด {{.Order.Total}} บาท</h4>
+		
+			<h4>รอการตรวจสอบคำสั่งซื้อจากผู้ดูแลระบบ</h4>
+		</body>
+	</html>`
+
+		dataAdmin := struct {
+			Firstname string
+			Lastname  string
+			Contents  [][]string
+			Order     MyOrder
+		}{
+			Firstname: firstName,
+			Lastname:  lastName,
+			Contents:  contents,
+			Order:     MyOrder{Original: order},
+		}
+
+		t2 := template.Must(template.New("emailTemplate").Parse(emailTemplateAdmin))
+		var tplBuffer2 bytes.Buffer
+		if err := t2.Execute(&tplBuffer2, dataAdmin); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("3 data", tplBuffer2.String())
+		message.SetBody("text/html", tplBuffer2.String())
+		m.Send(message)
+		fmt.Println("Email admin Sent Successfully!")
+
+		context.IndentedJSON(http.StatusCreated, gin.H{
+			"code": 200,
+		})
 		fmt.Println("Email Sent!")
 	}
 
@@ -1882,33 +2074,6 @@ func Track(context *gin.Context) {
 			"code": 500,
 		})
 	} else {
-		fmt.Println("555")
-		fmt.Println(order)
-		// // hostname is used by PlainAuth to validate the TLS certificate.
-		// hostname := "smtp.gmail.com"
-		// auth := smtp.PlainAuth("", "B6118693@g.sut.ac.th", "nckvsebgdcoaxppj", hostname)
-
-		// msg := "From: " + "shop" + "\n" +
-		// 	"To: " + order.email + "\n" +
-		// 	"Subject: " + " ข้อมูลการขนส่ง" + "\n\n" +
-		// 	"บริษัทขนส่ง " + company + "\n " +
-		// 	"เลขพัสดุของคุณคือ " + track + "\n" +
-		// 	"รายละเอียดเพิ่มเติม " + description + "\n" +
-		// 	"รายการสั่งซื้อ " + order.listName + "\n" +
-		// 	"ราคา " + order.listPrice + "\n" +
-		// 	"จำนวน " + order.listAmount + "\n" +
-		// 	"รวม " + order.total + "\n" +
-		// 	"วันที่สั่งซื้อ " + order.day + "\n" +
-		// 	"ที่อยู่จัดส่ง " + order.address + "\n" +
-		// 	"ขอบคุณที่ใช้บริการ"
-
-		// err := smtp.SendMail(hostname+":587", auth, "B6118693@g.sut.ac.th", []string{order.email},
-		// 	[]byte(msg))
-		// if err != nil {
-		// 	fmt.Println(err)
-		// }
-		// fmt.Println("Email Sent!")
-
 		err := godotenv.Load()
 		if err != nil {
 			log.Fatal("Error loading .env file")
@@ -1922,14 +2087,78 @@ func Track(context *gin.Context) {
 
 		GeneratePDF(about, order)
 		m := services.Mailer{}
+		contents := getContents(order)
 		message := gomail.NewMessage()
 		message.SetHeader("To", order.email)
 		message.SetHeader("Subject", "ข้อมูลการขนส่ง")
-		message.SetBody("text/html", "บริษัทขนส่ง "+company+"<br>"+
-			"เลขพัสดุของคุณคือ "+track+"<br>"+"รายละเอียดเพิ่มเติม "+description+"<br>"+
-			"รายการสั่งซื้อ "+order.listName+"<br>"+"ราคา "+order.listPrice+"<br>"+
-			"จำนวน "+order.listAmount+"<br>"+"รวม "+order.total+"<br>"+
-			"วันที่สั่งซื้อ "+order.day+"<br>"+"ที่อยู่จัดส่ง "+order.address+"<br>"+"ขอบคุณที่ใช้บริการ")
+		emailTemplate :=
+			`
+			<!DOCTYPE html>
+			<html>
+			<head>
+			<title>HTML Email with Loop</title>
+				<style>
+					table {
+						border-collapse: collapse;
+						width: 100%;
+					}
+					th, td {
+						text-align: left;
+						padding: 8px;
+					}
+					tr:nth-child(even){background-color: #f2f2f2}
+					th {
+						background-color: #4CAF50;
+						color: white;
+					}
+				</style>
+			</head>
+			<body>
+				<h2>บริษัทขนส่ง {{.Company}} </h2>
+				<h4>เลขพัสดุของคุณคือ {{.Track}}</h4>	
+				<h5>วันที่สั่งซื้อ {{.Order.Day}}</h5>
+				<h5>ที่อยู่จัดส่ง {{.Order.Address}}</h5>
+				<h4>รายละเอียดเพิ่มเติม {{.Description}}</h4>
+				<table>
+					<tr>
+						<th>ลำดับ</th>
+						<th>ชื่อสินค้า</th>
+						<th>จำนวน</th>
+						<th>ราคา</th>
+					</tr>
+					{{range $index, $element := .Contents}}
+					<tr>
+						{{range $index1, $element1 := $element}}
+						<td>{{$element1}}</td>
+						{{end}}
+					</tr>
+					{{end}}
+				</table>
+				<h4>รวมเป็นเงินทั้งหมด {{.Order.Total}} บาท</h4>
+			
+				<h5>ขอบคุณที่ใช้บริการ</h5>
+			</body>
+		</html>`
+
+		data := struct {
+			Company     string
+			Track       string
+			Description string
+			Contents    [][]string
+			Order       MyGetOrder
+		}{
+			Company:     company,
+			Track:       track,
+			Description: description,
+			Contents:    contents,
+			Order:       MyGetOrder{Original: order},
+		}
+		t := template.Must(template.New("emailTemplate").Parse(emailTemplate))
+		var tplBuffer bytes.Buffer
+		if err := t.Execute(&tplBuffer, data); err != nil {
+			log.Fatal(err)
+		}
+		message.SetBody("text/html", tplBuffer.String())
 
 		message.Attach("file/ใบเสร็จรับเงิน.pdf")
 		m.Send(message)
@@ -2095,7 +2324,7 @@ func GeneratePDF(about about, order getOrder) (bytes.Buffer, error) {
 			Size:      8,
 			GridSizes: []uint{3, 4, 2, 3},
 		},
-		Align:              consts.Center,
+		Align:              consts.Left,
 		HeaderContentSpace: 1,
 		Line:               false,
 	})
@@ -2111,19 +2340,11 @@ func GeneratePDF(about about, order getOrder) (bytes.Buffer, error) {
 			})
 		})
 		m.Col(2, func() {
-			m.Text(order.total, props.Text{
+			m.Text(order.total+" "+"บาท", props.Text{
 				Top:   5,
 				Style: consts.Bold,
-				Size:  8,
-				Align: consts.Center,
-			})
-		})
-		m.Col(3, func() {
-			m.Text("บาท", props.Text{
-				Top:   5,
-				Style: consts.Bold,
-				Size:  8,
-				Align: consts.Center,
+				Size:  9,
+				Align: consts.Right,
 			})
 		})
 	})
