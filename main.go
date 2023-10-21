@@ -15,14 +15,15 @@ import (
 
 	"strconv"
 
-	"github.com/johnfercher/maroto/pkg/color"
-	"github.com/johnfercher/maroto/pkg/consts"
-	"github.com/johnfercher/maroto/pkg/pdf"
-	"github.com/johnfercher/maroto/pkg/props"
 	"html/template"
 	"log"
 	"server/app/config"
 	services "server/app/service"
+
+	"github.com/johnfercher/maroto/pkg/color"
+	"github.com/johnfercher/maroto/pkg/consts"
+	"github.com/johnfercher/maroto/pkg/pdf"
+	"github.com/johnfercher/maroto/pkg/props"
 
 	"github.com/joho/godotenv"
 	"gopkg.in/gomail.v2"
@@ -1163,7 +1164,7 @@ func AddOrder(context *gin.Context) {
 
 		//----admin
 		message.SetHeader("From", "shop"+email)
-		message.SetHeader("To",	"B6118693@g.sut.ac.th")
+		message.SetHeader("To", "B6118693@g.sut.ac.th")
 		message.SetHeader("Subject", "คำสั่งซื้อสินค้า")
 		emailTemplateAdmin :=
 			`
@@ -2176,6 +2177,14 @@ func getHeader() []string {
 	return []string{"ลำดับ", "ชื่อสินค้า", "จำนวน", "ราคา"}
 }
 
+func getHeaderName() []string {
+	return []string{"ลำดับ", "ชื่อสินค้า"}
+}
+
+func getHeaderPrice() []string {
+	return []string{"จำนวน", "ราคา"}
+}
+
 func getContents(order getOrder) [][]string {
 	product := order.listName
 	amount := order.listAmount
@@ -2197,6 +2206,49 @@ func getContents(order getOrder) [][]string {
 	// Populate the data with the corresponding values
 	for i := 0; i < n; i++ {
 		data[i] = []string{strconv.Itoa(i + 1), productParts[i], amountParts[i], priceParts[i]}
+	}
+
+	return data
+}
+
+func getContentsName(order getOrder) [][]string {
+	product := order.listName
+	fmt.Println("product", product)
+	// Split the input strings into slices
+	productParts := strings.Split(product, ",")
+
+	// Determine the number of elements in the input
+	n := len(productParts)
+
+	// Create a slice of slices to organize the data
+	data := make([][]string, n)
+
+	// Populate the data with the corresponding values
+	for i := 0; i < n; i++ {
+		data[i] = []string{strconv.Itoa(i + 1), productParts[i]}
+	}
+
+	return data
+}
+
+func getContentsPrice(order getOrder) [][]string {
+	amount := order.listAmount
+	price := order.listPrice
+	fmt.Println("amount", amount)
+	fmt.Println("price", price)
+	// Split the input strings into slices
+	amountParts := strings.Split(amount, ",")
+	priceParts := strings.Split(price, ",")
+
+	// Determine the number of elements in the input
+	n := len(priceParts)
+
+	// Create a slice of slices to organize the data
+	data := make([][]string, n)
+
+	// Populate the data with the corresponding values
+	for i := 0; i < n; i++ {
+		data[i] = []string{amountParts[i], priceParts[i]}
 	}
 
 	return data
@@ -2315,38 +2367,116 @@ func GeneratePDF(about about, order getOrder) (bytes.Buffer, error) {
 		m.ColSpace(9)
 	})
 
-	m.TableList(header, contents, props.TableList{
-		HeaderProp: props.TableListContent{
-			Size:      9,
-			GridSizes: []uint{3, 4, 2, 3},
-		},
-		ContentProp: props.TableListContent{
-			Size:      8,
-			GridSizes: []uint{3, 4, 2, 3},
-		},
-		Align:              consts.Left,
-		HeaderContentSpace: 1,
-		Line:               false,
+	m.Row(6, func() {
+		m.ColSpace(2)
+		m.Col(1, func() {
+			m.Text(header[0], props.Text{
+				Size:  9,
+				Align: consts.Left,
+				Style: consts.Bold,
+			})
+		})
+		m.Col(4, func() {
+			m.Text(header[1], props.Text{
+				Size:  9,
+				Align: consts.Left,
+				Style: consts.Bold,
+			})
+		})
+		m.Col(1, func() {
+			m.Text(header[2], props.Text{
+				Size:  9,
+				Align: consts.Center,
+				Style: consts.Bold,
+			})
+		})
+		m.Col(2, func() {
+			m.Text(header[3], props.Text{
+				Size:  9,
+				Align: consts.Center,
+				Style: consts.Bold,
+			})
+		})
+		m.ColSpace(2)
 	})
+
+	for _, s := range contents {
+		m.Row(5, func() {
+			m.ColSpace(2)
+			m.Col(1, func() {
+				m.Text(s[0], props.Text{
+					Size:  8,
+					Align: consts.Left,
+				})
+			})
+			m.Col(4, func() {
+				m.Text(s[1], props.Text{
+					Size:  8,
+					Align: consts.Left,
+				})
+			})
+			m.Col(1, func() {
+				m.Text(s[2], props.Text{
+					Size:  8,
+					Align: consts.Center,
+				})
+			})
+			m.Col(2, func() {
+				m.Text(s[3], props.Text{
+					Size:  8,
+					Align: consts.Center,
+				})
+			})
+			m.ColSpace(2)
+		})
+	}
+
+	// m.TableList(header, contents, props.TableList{
+	// 	HeaderProp: props.TableListContent{
+	// 		Size:      9,
+	// 		GridSizes: []uint{1, 7, 2, 2},
+	// 	},
+	// 	ContentProp: props.TableListContent{
+	// 		Size:      8,
+	// 		GridSizes: []uint{1, 7, 2, 2},
+	// 	},
+	// 	Align:              consts.Right,
+	// 	HeaderContentSpace: 1,
+	// 	Line:               true,
+	// })
 
 	m.Row(20, func() {
 		m.ColSpace(5)
-		m.Col(2, func() {
-			m.Text("จำนวนเงิน", props.Text{
+		m.Col(3, func() {
+			m.Text("จำนวนเงินทั้งหมด", props.Text{
 				Top:   5,
 				Style: consts.Bold,
-				Size:  8,
 				Align: consts.Right,
 			})
 		})
 		m.Col(2, func() {
-			m.Text(order.total+" "+"บาท", props.Text{
+			m.Text(order.total, props.Text{
 				Top:   5,
 				Style: consts.Bold,
-				Size:  9,
-				Align: consts.Right,
+				Align: consts.Center,
 			})
 		})
+		m.Col(1, func() {
+			m.Text("บาท", props.Text{
+				Top:   5,
+				Style: consts.Bold,
+				Align: consts.Center,
+			})
+		})
+		m.ColSpace(1)
+		// m.Col(2, func() {
+		// 	m.Text(order.total+" "+"บาท", props.Text{
+		// 		Top:   5,
+		// 		Style: consts.Bold,
+		// 		Size:  9,
+		// 		Align: consts.Right,
+		// 	})
+		// })
 	})
 
 	end := time.Now()
